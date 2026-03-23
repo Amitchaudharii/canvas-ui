@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 // ============================================================
 //  TOPOLOGY CANVAS
@@ -6,10 +6,10 @@
 //  Deliberately thin — all logic lives in the engine + hook.
 // ============================================================
 
-import { useCallback } from 'react';
-import { useTopology } from '@/hooks/useTopology.js';
-import { HUD, Controls, ArrowLegend } from './hud/index.jsx';
-import { InfoPanel } from './panels/InfoPanel.jsx';
+import { useCallback } from "react";
+import { useTopology } from "@/hooks/useTopology.js";
+import { HUD, Controls, ArrowLegend } from "./hud/index.jsx";
+import { InfoPanel } from "./panels/InfoPanel.jsx";
 
 /**
  * @param {{
@@ -20,14 +20,8 @@ import { InfoPanel } from './panels/InfoPanel.jsx';
  * }} props
  */
 export function TopologyCanvas({ config, onSelect, className, style }) {
-  const {
-    canvasRef,
-    engine,
-    selected,
-    hovered,
-    zoomPct,
-    elemCount,
-  } = useTopology({ config, onSelect });
+  const { canvasRef, engine, selected, hovered, zoomPct, elemCount } =
+    useTopology({ config, onSelect });
 
   const handleClose = useCallback(() => engine.clearSelection(), [engine]);
 
@@ -35,25 +29,25 @@ export function TopologyCanvas({ config, onSelect, className, style }) {
     <div
       className={className}
       style={{
-        position:   'relative',
-        width:      '100%',
-        height:     '100%',
-        background: '#0d1b2a',
-        overflow:   'hidden',
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        background: "#0d1b2a",
+        overflow: "hidden",
         ...style,
       }}
     >
       {/* Canvas — fills the container */}
       <canvas
         ref={canvasRef}
-        style={{ display: 'block', width: '100%', height: '100%' }}
+        style={{ display: "block", width: "100%", height: "100%" }}
       />
 
       {/* Fixed overlays */}
-      <HUD        elemCount={elemCount} selected={selected} hovered={hovered} />
-      <Controls   engine={engine} zoomPct={zoomPct} />
+      <HUD elemCount={elemCount} selected={selected} hovered={hovered} />
+      <Controls engine={engine} zoomPct={zoomPct} />
       <ArrowLegend />
-      <InfoPanel  element={selected} onClose={handleClose} />
+      <InfoPanel element={selected} onClose={handleClose} />
     </div>
   );
 }

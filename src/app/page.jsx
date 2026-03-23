@@ -17,7 +17,7 @@ import { generateMockConfig } from "@/lib/topology/mock.js";
 
 async function getTopologyConfig() {
   // ── Replace this with your real data source ────────────────
-  return generateMockConfig({ rows: 4, cols: 4 });
+  return generateMockConfig({ rows: 3, cols: 3 });
 
   // ── Example: fetch from your internal API route ────────────
   // const res = await fetch('http://localhost:3000/api/topology', {
