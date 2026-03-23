@@ -20,14 +20,14 @@
 //    return NextResponse.json(config);
 // ============================================================
 
-import { NextResponse }      from 'next/server';
-import { generateMockConfig } from '@/lib/topology/mock.js';
+import { NextResponse } from "next/server";
+import { generateMockConfig } from "@/lib/topology/mock.js";
 
 export async function GET(request) {
   const { searchParams } = request.nextUrl;
 
-  const rows = Math.min(parseInt(searchParams.get('rows') ?? '3', 10), 20);
-  const cols = Math.min(parseInt(searchParams.get('cols') ?? '3', 10), 20);
+  const rows = Math.min(parseInt(searchParams.get("rows") ?? "3", 10), 100);
+  const cols = Math.min(parseInt(searchParams.get("cols") ?? "3", 10), 100);
 
   // ── TODO: replace with real data source ───────────────────
   const config = generateMockConfig({ rows, cols });
@@ -35,7 +35,7 @@ export async function GET(request) {
   return NextResponse.json(config, {
     headers: {
       // Clients cache 10 s, CDN/edge 60 s, stale-while-revalidate
-      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=10',
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=10",
     },
   });
 }

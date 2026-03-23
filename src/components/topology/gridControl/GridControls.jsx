@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import GridSpinner from "./GridSpinner";
 
 const MIN_VAL = 1;
-const MAX_VAL = 20;
+const MAX_VAL = 100;
 
 const SURFACE = {
   background: "rgba(9, 18, 30, 0.92)",
