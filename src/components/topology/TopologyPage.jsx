@@ -87,7 +87,6 @@ export function TopologyPage({ initialConfig }) {
     console.log("  TopologyAPI.setGrid(5, 5)    ← change grid from JS too");
     console.log("  TopologyAPI.markDirty()");
     console.groupEnd();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyGrid]);
 
   return (

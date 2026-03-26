@@ -1,7 +1,12 @@
 // ============================================================
 //  CANVAS DRAW FUNCTIONS
 //  Pure, stateless. One function per element type.
-//  No class instances, no side effects — easy to test/replace.
+//
+//  Connection model:
+//    drawConnectionLine(ctx, el, from, to)
+//      — draws ONE line with its own arrowhead(s).
+//      — arrowhead color/size matches the line's resolved style.
+//      — el.offset is the perpendicular displacement from centre.
 //
 //  Arrow direction:
 //    'from'          → arrowhead toward toId    (blue  #64c8ff)
@@ -9,250 +14,242 @@
 //    'bidirectional' → arrowheads on both ends   (green  #aaffcc)
 // ============================================================
 
-// ── Design tokens ─────────────────────────────────────────────
-
 const TOKEN = {
-  bg:           '#0d1b2a',
-  routerFill:   '#0a1520',
-  routerStroke: '#ffffff',
-  routerLabel:  '#ffffff',
-  bridgeFill:   '#111a24',
-  bridgeStroke: '#bbbbbb',
-  bridgeLabel:  '#dddddd',
-  connStroke:   '#ffffff',
-  selStroke:    '#64c8ff',
-  selFill:      '#0d2a3e',
-  hovStroke:    '#90d8ff',
-  glowSel:      '#64c8ff',
-  glowHov:      '#90d8ff',
-  arrowFrom:    '#64c8ff',   // direction = 'from'
-  arrowTo:      '#ff8c42',   // direction = 'to'
-  arrowBi:      '#aaffcc',   // direction = 'bidirectional'
-  font:         "'Courier New', monospace",
+  bg: "#0d1b2a",
+  routerFill: "#0a1520",
+  routerStroke: "#ffffff",
+  routerLabel: "#ffffff",
+  bridgeFill: "#111a24",
+  bridgeStroke: "#bbbbbb",
+  bridgeLabel: "#dddddd",
+  connStroke: "#ffffff",
+  selStroke: "#64c8ff",
+  selFill: "#0d2a3e",
+  hovStroke: "#90d8ff",
+  glowSel: "#64c8ff",
+  glowHov: "#90d8ff",
+  arrowFrom: "#64c8ff",
+  arrowTo: "#ff8c42",
+  arrowBi: "#aaffcc",
+  font: "'Courier New', monospace",
 };
 
 // ── Helpers ───────────────────────────────────────────────────
 
-/**
- * Resolve a style property with a fallback.
- * @param {object} style
- * @param {string} key
- * @param {*} fallback
- */
 function rs(style, key, fallback) {
   return style[key] ?? fallback;
 }
 
-/**
- * Draw an octagon path (8 sides, flat-top orientation).
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} cx
- * @param {number} cy
- * @param {number} r  radius
- */
 function octagonPath(ctx, cx, cy, r) {
   ctx.beginPath();
   for (let i = 0; i < 8; i++) {
-    const a  = (Math.PI * 2 * i) / 8 + Math.PI / 8;
-    const px = cx + r * Math.cos(a);
-    const py = cy + r * Math.sin(a);
-    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    const a = (Math.PI * 2 * i) / 8 + Math.PI / 8;
+    i === 0
+      ? ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a))
+      : ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
   }
   ctx.closePath();
 }
 
 function setGlow(ctx, color, blur) {
   ctx.shadowColor = color;
-  ctx.shadowBlur  = blur;
+  ctx.shadowBlur = blur;
 }
-
 function clearGlow(ctx) {
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur  = 0;
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
 }
 
 // ── Router ────────────────────────────────────────────────────
 
-/**
- * Draw a router as a double-ring octagon.
- * @param {CanvasRenderingContext2D} ctx
- * @param {object} el  RouterElement
- */
 export function drawRouter(ctx, el) {
   if (!el.state.visible) return;
-
   const { x, y, radius: r, label, style, state } = el;
-  const sel = state.selected;
-  const hov = state.hovered;
+  const sel = state.selected,
+    hov = state.hovered;
 
-  const fill   = rs(style, 'fillColor',   sel ? TOKEN.selFill   : TOKEN.routerFill);
-  const stroke = rs(style, 'strokeColor', sel ? TOKEN.selStroke : hov ? TOKEN.hovStroke : TOKEN.routerStroke);
-  const sw     = rs(style, 'strokeWidth', sel ? 3 : 2);
-  const lc     = rs(style, 'labelColor',  TOKEN.routerLabel);
-  const fs     = rs(style, 'fontSize',    13);
+  const fill = rs(style, "fillColor", sel ? TOKEN.selFill : TOKEN.routerFill);
+  const stroke = rs(
+    style,
+    "strokeColor",
+    sel ? TOKEN.selStroke : hov ? TOKEN.hovStroke : TOKEN.routerStroke,
+  );
+  const sw = rs(style, "strokeWidth", sel ? 3 : 2);
+  const lc = rs(style, "labelColor", TOKEN.routerLabel);
+  const fs = rs(style, "fontSize", 13);
 
   ctx.save();
-
-  if (sel || hov) {
+  if (sel || hov)
     setGlow(
       ctx,
-      rs(style, 'glowColor', sel ? TOKEN.glowSel : TOKEN.glowHov),
-      rs(style, 'glowBlur',  sel ? 28 : 16),
+      rs(style, "glowColor", sel ? TOKEN.glowSel : TOKEN.glowHov),
+      rs(style, "glowBlur", sel ? 28 : 16),
     );
-  }
 
-  // Outer octagon
   octagonPath(ctx, x, y, r);
-  ctx.fillStyle   = fill;   ctx.fill();
-  ctx.strokeStyle = stroke; ctx.lineWidth = sw; ctx.stroke();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = sw;
+  ctx.stroke();
   clearGlow(ctx);
 
-  // Inner ring (double-octagon aesthetic)
   octagonPath(ctx, x, y, r - 6);
-  ctx.strokeStyle = stroke + '44';
-  ctx.lineWidth   = 1;
+  ctx.strokeStyle = stroke + "44";
+  ctx.lineWidth = 1;
   ctx.stroke();
 
-  // Label
-  ctx.fillStyle    = lc;
-  ctx.font         = `bold ${fs}px ${TOKEN.font}`;
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.fillStyle = lc;
+  ctx.font = `bold ${fs}px ${TOKEN.font}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.fillText(label, x, y);
-
   ctx.restore();
 }
 
 // ── Bridge ────────────────────────────────────────────────────
 
-/**
- * Draw a bridge as a rounded rectangle.
- * @param {CanvasRenderingContext2D} ctx
- * @param {object} el  BridgeElement
- */
 export function drawBridge(ctx, el) {
   if (!el.state.visible) return;
-
   const { x, y, radius: r, label, style, state } = el;
-  const sel = state.selected;
-  const hov = state.hovered;
+  const sel = state.selected,
+    hov = state.hovered;
 
-  const fill   = rs(style, 'fillColor',   sel ? TOKEN.selFill   : TOKEN.bridgeFill);
-  const stroke = rs(style, 'strokeColor', sel ? TOKEN.selStroke : hov ? TOKEN.hovStroke : TOKEN.bridgeStroke);
-  const sw     = rs(style, 'strokeWidth', sel ? 2.5 : 1.5);
-  const lc     = rs(style, 'labelColor',  TOKEN.bridgeLabel);
-  const fs     = rs(style, 'fontSize',    10);
+  const fill = rs(style, "fillColor", sel ? TOKEN.selFill : TOKEN.bridgeFill);
+  const stroke = rs(
+    style,
+    "strokeColor",
+    sel ? TOKEN.selStroke : hov ? TOKEN.hovStroke : TOKEN.bridgeStroke,
+  );
+  const sw = rs(style, "strokeWidth", sel ? 2.5 : 1.5);
+  const lc = rs(style, "labelColor", TOKEN.bridgeLabel);
+  const fs = rs(style, "fontSize", 10);
 
   ctx.save();
-
-  if (sel || hov) {
+  if (sel || hov)
     setGlow(ctx, sel ? TOKEN.glowSel : TOKEN.glowHov, sel ? 20 : 12);
-  }
 
-  const hw = r, hh = r * 0.72;
+  const hw = r,
+    hh = r * 0.72;
   ctx.beginPath();
   ctx.roundRect(x - hw, y - hh, hw * 2, hh * 2, 4);
-  ctx.fillStyle   = fill;   ctx.fill();
-  ctx.strokeStyle = stroke; ctx.lineWidth = sw; ctx.stroke();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = sw;
+  ctx.stroke();
   clearGlow(ctx);
 
-  ctx.fillStyle    = lc;
-  ctx.font         = `bold ${fs}px ${TOKEN.font}`;
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.fillStyle = lc;
+  ctx.font = `bold ${fs}px ${TOKEN.font}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.fillText(label, x, y);
-
   ctx.restore();
 }
 
-// ── Connection ────────────────────────────────────────────────
+// ── Connection Line ───────────────────────────────────────────
+//
+//  One independently drawn line. el.offset displaces it
+//  perpendicularly from the centre axis so bundles spread out.
+//  The arrowhead is drawn with the SAME color and width as the
+//  line — they are visually one object.
 
-/**
- * Draw a connection as a multi-line bundle with directional arrowheads.
- *
- * @param {CanvasRenderingContext2D} ctx
- * @param {object} el       ConnectionElement
- * @param {{ x, y, radius? }} from  position of the source element
- * @param {{ x, y, radius? }} to    position of the target element
- */
-export function drawConnection(ctx, el, from, to) {
+export function drawConnectionLine(ctx, el, from, to) {
   if (!el.state.visible) return;
 
-  const { style, state, direction, lineCount } = el;
-  const sel = state.selected;
-  const hov = state.hovered;
+  const { style, state, direction, offset } = el;
+  const sel = state.selected,
+    hov = state.hovered;
 
-  const x1 = from.x, y1 = from.y;
-  const x2 = to.x,   y2 = to.y;
-  const dx  = x2 - x1, dy = y2 - y1;
+  const x1 = from.x,
+    y1 = from.y;
+  const x2 = to.x,
+    y2 = to.y;
+  const dx = x2 - x1,
+    dy = y2 - y1;
   const len = Math.sqrt(dx * dx + dy * dy) || 1;
 
-  // Perpendicular normal for multi-line offset
-  const nx = -dy / len, ny = dx / len;
+  // Perpendicular unit normal
+  const nx = -dy / len,
+    ny = dx / len;
 
-  // Arrow color is driven entirely by direction
-  const dirColor = direction === 'from' ? TOKEN.arrowFrom
-                 : direction === 'to'   ? TOKEN.arrowTo
-                 :                        TOKEN.arrowBi;
+  // Apply this line's offset from the bundle centre
+  const sx = x1 + nx * offset,
+    sy = y1 + ny * offset;
+  const ex = x2 + nx * offset,
+    ey = y2 + ny * offset;
 
-  const stroke  = rs(style, 'strokeColor', sel ? TOKEN.selStroke : hov ? TOKEN.hovStroke : TOKEN.connStroke);
-  const alpha   = rs(style, 'alpha',       sel ? 0.95 : hov ? 0.82 : 0.5);
-  const lw      = rs(style, 'strokeWidth', 1);
-  const spacing = rs(style, 'lineSpacing', 3.5);
-  const dash    = style.dash ?? [];
+  // Direction drives the base color of BOTH line and arrowhead
+  const dirColor =
+    direction === "from"
+      ? TOKEN.arrowFrom
+      : direction === "to"
+        ? TOKEN.arrowTo
+        : TOKEN.arrowBi;
 
-  const count    = Math.max(1, lineCount);
-  const startOff = -(count - 1) / 2 * spacing;
+  // Resolved line style — selected/hovered override color
+  const stroke = rs(
+    style,
+    "strokeColor",
+    sel ? TOKEN.selStroke : hov ? TOKEN.hovStroke : dirColor,
+  );
+  const alpha = rs(style, "alpha", sel ? 0.95 : hov ? 0.85 : 0.55);
+  const lw = rs(style, "strokeWidth", sel ? 2 : 1);
+  const dash = style.dash ?? [];
 
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.strokeStyle = stroke;
-  ctx.lineWidth   = lw;
+  ctx.lineWidth = lw;
   if (dash.length) ctx.setLineDash(dash);
 
-  // ── Multi-line bundle ─────────────────────────────────────
-  for (let i = 0; i < count; i++) {
-    const off = startOff + i * spacing;
-    ctx.beginPath();
-    ctx.moveTo(x1 + nx * off, y1 + ny * off);
-    ctx.lineTo(x2 + nx * off, y2 + ny * off);
-    ctx.stroke();
-  }
-
+  // ── Draw the line ─────────────────────────────────────────
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(ex, ey);
+  ctx.stroke();
   ctx.setLineDash([]);
-  ctx.globalAlpha = Math.min(1, alpha + 0.28);
-  ctx.fillStyle   = dirColor;
 
-  const angle  = Math.atan2(dy, dx);
-  const AL = 11, AW = Math.PI / 6;
-  const toR   = to.radius   ?? 18;
+  // ── Draw arrowhead(s) — same color & alpha as the line ────
+  //    Size scales with lineWidth so thin lines get thin arrows.
+  ctx.globalAlpha = Math.min(1, alpha + 0.2);
+  ctx.fillStyle = stroke; // ← arrowhead matches line color exactly
+
+  const angle = Math.atan2(dy, dx);
+  const AL = rs(style, "arrowLength", 1 + lw * 2); // scales tightly with line width
+  const AW = rs(style, "arrowWidth", Math.PI / 7); // narrower angle → slimmer head
+  const toR = to.radius ?? 18;
   const fromR = from.radius ?? 46;
 
-  // ── Arrowhead → toward toId (direction = 'from' or 'bidirectional') ──
-  if (direction === 'from' || direction === 'bidirectional') {
-    const tip = {
-      x: x2 - (dx / len) * (toR + 1),
-      y: y2 - (dy / len) * (toR + 1),
-    };
+  // Arrow → toward toId   (direction = 'from' | 'bidirectional')
+  if (direction === "from" || direction === "bidirectional") {
+    // tip sits on the element edge, offset laterally with the line
+    const tipX = x2 - (dx / len) * (toR + 1) + nx * offset;
+    const tipY = y2 - (dy / len) * (toR + 1) + ny * offset;
     ctx.beginPath();
-    ctx.moveTo(tip.x, tip.y);
-    ctx.lineTo(tip.x - AL * Math.cos(angle - AW), tip.y - AL * Math.sin(angle - AW));
-    ctx.lineTo(tip.x - AL * Math.cos(angle + AW), tip.y - AL * Math.sin(angle + AW));
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(
+      tipX - AL * Math.cos(angle - AW),
+      tipY - AL * Math.sin(angle - AW),
+    );
+    ctx.lineTo(
+      tipX - AL * Math.cos(angle + AW),
+      tipY - AL * Math.sin(angle + AW),
+    );
     ctx.closePath();
     ctx.fill();
   }
 
-  // ── Arrowhead ← toward fromId (direction = 'to' or 'bidirectional') ──
-  if (direction === 'to' || direction === 'bidirectional') {
-    const ra  = angle + Math.PI;
-    const tip = {
-      x: x1 + (dx / len) * (fromR + 1),
-      y: y1 + (dy / len) * (fromR + 1),
-    };
+  // Arrow ← toward fromId  (direction = 'to' | 'bidirectional')
+  if (direction === "to" || direction === "bidirectional") {
+    const ra = angle + Math.PI;
+    const tipX = x1 + (dx / len) * (fromR + 1) + nx * offset;
+    const tipY = y1 + (dy / len) * (fromR + 1) + ny * offset;
     ctx.beginPath();
-    ctx.moveTo(tip.x, tip.y);
-    ctx.lineTo(tip.x - AL * Math.cos(ra - AW), tip.y - AL * Math.sin(ra - AW));
-    ctx.lineTo(tip.x - AL * Math.cos(ra + AW), tip.y - AL * Math.sin(ra + AW));
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(tipX - AL * Math.cos(ra - AW), tipY - AL * Math.sin(ra - AW));
+    ctx.lineTo(tipX - AL * Math.cos(ra + AW), tipY - AL * Math.sin(ra + AW));
     ctx.closePath();
     ctx.fill();
   }
@@ -262,99 +259,105 @@ export function drawConnection(ctx, el, from, to) {
 
 // ── Grid ──────────────────────────────────────────────────────
 
-/**
- * Draw a subtle dot-grid background aligned to the viewport.
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} width
- * @param {number} height
- * @param {number} panX
- * @param {number} panY
- * @param {number} zoom
- */
 export function drawGrid(ctx, width, height, panX, panY, zoom) {
   const gs = 60 * zoom;
   if (gs < 8) return;
-
   const ox = ((panX % gs) + gs) % gs;
   const oy = ((panY % gs) + gs) % gs;
-
   ctx.save();
-  ctx.strokeStyle = 'rgba(100, 200, 255, 0.04)';
-  ctx.lineWidth   = 1;
-
-  for (let x = ox; x < width;  x += gs) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+  ctx.strokeStyle = "rgba(100, 200, 255, 0.04)";
+  ctx.lineWidth = 1;
+  for (let x = ox; x < width; x += gs) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
   }
   for (let y = oy; y < height; y += gs) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y);  ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
   }
   ctx.restore();
 }
 
 // ── Hit testing ───────────────────────────────────────────────
 
-/**
- * @param {object} el  RouterElement
- * @param {number} wx  world x
- * @param {number} wy  world y
- * @returns {boolean}
- */
 export function hitTestRouter(el, wx, wy) {
-  const dx = wx - el.x, dy = wy - el.y;
+  const dx = wx - el.x,
+    dy = wy - el.y;
   return Math.sqrt(dx * dx + dy * dy) < el.radius + 4;
 }
 
-/**
- * @param {object} el  BridgeElement
- * @param {number} wx
- * @param {number} wy
- * @returns {boolean}
- */
 export function hitTestBridge(el, wx, wy) {
-  const hw = el.radius, hh = el.radius * 0.72;
-  return wx >= el.x - hw - 4 && wx <= el.x + hw + 4
-      && wy >= el.y - hh - 4 && wy <= el.y + hh + 4;
+  const hw = el.radius,
+    hh = el.radius * 0.72;
+  return (
+    wx >= el.x - hw - 4 &&
+    wx <= el.x + hw + 4 &&
+    wy >= el.y - hh - 4 &&
+    wy <= el.y + hh + 4
+  );
 }
 
 /**
- * Line-segment distance hit test for connections.
- * @param {{ x, y }} fromPos
- * @param {{ x, y }} toPos
+ * Hit test a single connection line using its offset.
+ * @param {{ x, y, radius? }} fromPos
+ * @param {{ x, y, radius? }} toPos
+ * @param {number} offset   perpendicular displacement of this line
  * @param {number} wx
  * @param {number} wy
- * @param {number} threshold  px tolerance
- * @returns {boolean}
+ * @param {number} threshold
  */
-export function hitTestConnection(fromPos, toPos, wx, wy, threshold = 8) {
-  const dx   = toPos.x - fromPos.x, dy = toPos.y - fromPos.y;
-  const len2 = dx * dx + dy * dy;
+export function hitTestConnectionLine(
+  fromPos,
+  toPos,
+  offset,
+  wx,
+  wy,
+  threshold,
+) {
+  const dx = toPos.x - fromPos.x,
+    dy = toPos.y - fromPos.y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+
+  // Offset start/end points laterally
+  const nx = -dy / len,
+    ny = dx / len;
+  const sx = fromPos.x + nx * offset,
+    sy = fromPos.y + ny * offset;
+  const ex = toPos.x + nx * offset,
+    ey = toPos.y + ny * offset;
+
+  const ldx = ex - sx,
+    ldy = ey - sy;
+  const len2 = ldx * ldx + ldy * ldy;
   if (len2 === 0) return false;
-  const t  = Math.max(0, Math.min(1, ((wx - fromPos.x) * dx + (wy - fromPos.y) * dy) / len2));
-  const cx = fromPos.x + t * dx - wx;
-  const cy = fromPos.y + t * dy - wy;
+
+  const t = Math.max(
+    0,
+    Math.min(1, ((wx - sx) * ldx + (wy - sy) * ldy) / len2),
+  );
+  const cx = sx + t * ldx - wx;
+  const cy = sy + t * ldy - wy;
   return Math.sqrt(cx * cx + cy * cy) < threshold;
 }
 
 // ── Dispatch ─────────────────────────────────────────────────
 
-/**
- * Draw any element, dispatching by type.
- * @param {CanvasRenderingContext2D} ctx
- * @param {object} el
- * @param {Map<string, {x,y,radius?}>} positions
- */
 export function drawElement(ctx, el, positions) {
   switch (el.type) {
-    case 'router':
+    case "router":
       drawRouter(ctx, el);
       break;
-    case 'bridge':
+    case "bridge":
       drawBridge(ctx, el);
       break;
-    case 'connection': {
+    case "connection-line": {
       const from = positions.get(el.fromId);
-      const to   = positions.get(el.toId);
-      if (from && to) drawConnection(ctx, el, from, to);
+      const to = positions.get(el.toId);
+      if (from && to) drawConnectionLine(ctx, el, from, to);
       break;
     }
   }
