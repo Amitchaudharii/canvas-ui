@@ -10,6 +10,8 @@
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
     "test:visual": "playwright test --project=chromium --grep @visual",
     "test:coverage": "vitest run --coverage",
     "test:perf": "playwright test --project=chromium --grep @perf",
