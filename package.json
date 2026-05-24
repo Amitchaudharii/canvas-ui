@@ -6,7 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test:visual": "playwright test --project=chromium --grep @visual",
+    "test:coverage": "vitest run --coverage",
+    "test:perf": "playwright test --project=chromium --grep @perf",
+    "test:update-snapshots": "playwright test --update-snapshots"
   },
   "dependencies": {
     "next": "16.2.1",
@@ -14,8 +21,12 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@rolldown/binding-darwin-x64": "^1.0.2",
+    "@vitest/coverage-v8": "^2.1.8",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.2.1"
+    "eslint-config-next": "16.2.1",
+    "vitest": "^2.1.8"
   }
 }
